@@ -396,6 +396,44 @@ def test_compliance_summary_matches_declared_interfaces(client):
     assert compliance["disclaimer"]
 
 
+def test_alert_report_matches_declared_interfaces(client):
+    """The notification panel is typed against `AlertReport`, so a backend rename
+    would otherwise reach the UI as a silently blank panel.
+
+    A default install configures no channel, so this run records a skip rather
+    than a delivery. The contract that matters is that the record is still
+    complete and self-describing: the panel reads `failures` to decide whether
+    anybody was reached, and an absent key there would read as "not failed".
+    """
+    ifaces = _declared_interfaces()
+    target = _pick_cases(client.captures, ["12_mixed_mitigations.pcap"])[0]
+    scan_id = client.post("/api/v1/scan", json={"path": str(target)}).json()["scan_id"]
+    report = client.get(f"/api/v1/report/{scan_id}").json()
+
+    alerts = report["alerts"]
+    for field, ts in ifaces["AlertReport"]:
+        assert field in alerts, f"AlertReport.{field} missing"
+        assert _coerce(alerts[field], ts), f"AlertReport.{field}={alerts[field]!r} not {ts}"
+
+    # A non-triggered run must still say *why* nothing went out, rather than
+    # leaving the panel to guess.
+    assert alerts["note"], "alert record carries no explanation"
+    if not alerts["triggered"]:
+        assert alerts["skipped_reason"], "a non-triggered alert run has no skipped_reason"
+
+    for delivery in alerts["deliveries"]:
+        for field, ts in ifaces["AlertDelivery"]:
+            assert field in delivery, f"AlertDelivery.{field} missing"
+            assert _coerce(delivery[field], ts), (
+                f"AlertDelivery.{field}={delivery[field]!r} not {ts}"
+            )
+        assert delivery["status"] in ("sent", "failed")
+        assert delivery["attempts"] >= 1
+
+    declared = dict(ifaces["Report"])
+    assert "alerts" in declared, "api.ts Report omits the alert record"
+
+
 def test_localized_finding_titles_present_for_hi(client):
     """The frontend switches on `title_hi` + `translation_complete`."""
     target = _pick_cases(

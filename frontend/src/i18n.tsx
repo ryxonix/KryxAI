@@ -173,6 +173,27 @@ const en: Record<string, string> = {
   'Exposure:': 'Exposure:',
   'Relevance:': 'Relevance:',
 
+  // notification
+  'Notification': 'Notification',
+  'The operator was not notified': 'The operator was not notified',
+  'Operator notified': 'Operator notified',
+  'No notification sent': 'No notification sent',
+  'No alert channel is configured.': 'No alert channel is configured.',
+  'at or above': 'at or above',
+  'handed off': 'handed off',
+  'failed': 'failed',
+  'configured': 'configured',
+  '{n} attempt(s)': '{n} attempt(s)',
+  '{n} channel(s) attempted': '{n} channel(s) attempted',
+  'no channel attempted': 'no channel attempted',
+  'Findings below this severity never notify': 'Findings below this severity never notify',
+  'At least one channel did not accept the notification. The findings are still in the report, but they were not announced, and this scan should not be relied on as having raised anyone.':
+    'At least one channel did not accept the notification. The findings are still in the report, but they were not announced, and this scan should not be relied on as having raised anyone.',
+  'The channels below accepted the notification. That is a hand-off, not a read receipt - nothing here proves a person saw it.':
+    'The channels below accepted the notification. That is a hand-off, not a read receipt - nothing here proves a person saw it.',
+  'Alerting is the only outbound call KryxAI makes; it is passive otherwise. Delivery is best-effort, never affects the scan result, and is not part of the evidence chain.':
+    'Alerting is the only outbound call KryxAI makes; it is passive otherwise. Delivery is best-effort, never affects the scan result, and is not part of the evidence chain.',
+
   // errors
   'Dismiss': 'Dismiss',
   'Retry': 'Retry',
@@ -325,6 +346,27 @@ const hi: Record<string, string> = {
   'Hide detail': 'विवरण छिपाएँ',
   'Exposure:': 'जोखिम:',
   'Relevance:': 'प्रासंगिकता:',
+
+  // notification
+  'Notification': 'सूचना',
+  'The operator was not notified': 'ऑपरेटर को सूचित नहीं किया गया',
+  'Operator notified': 'ऑपरेटर को सूचित किया गया',
+  'No notification sent': 'कोई सूचना नहीं भेजी गई',
+  'No alert channel is configured.': 'कोई अलर्ट चैनल कॉन्फ़िगर नहीं है।',
+  'at or above': 'इससे ऊपर या समतुल्य',
+  'handed off': 'सौंपा गया',
+  'failed': 'विफल',
+  'configured': 'कॉन्फ़िगर',
+  '{n} attempt(s)': '{n} प्रयास',
+  '{n} channel(s) attempted': '{n} चैनलों से प्रयास किया गया',
+  'no channel attempted': 'किसी चैनल से प्रयास नहीं किया गया',
+  'Findings below this severity never notify': 'इस गंभीरता से कम निष्कर्ष कभी सूचित नहीं करते',
+  'At least one channel did not accept the notification. The findings are still in the report, but they were not announced, and this scan should not be relied on as having raised anyone.':
+    'कम से कम एक चैनल ने सूचना स्वीकार नहीं की। निष्कर्ष फिर भी रिपोर्ट में मौजूद हैं, लेकिन उनकी घोषणा नहीं हुई, और यह नहीं माना जाना चाहिए कि इस स्कैन ने किसी को सूचित किया।',
+  'The channels below accepted the notification. That is a hand-off, not a read receipt - nothing here proves a person saw it.':
+    'नीचे दिए चैनलों ने सूचना स्वीकार कर ली। यह केवल सौंपना है, पठन की पुष्टि नहीं - यहाँ कुछ भी यह प्रमाणित नहीं करता कि किसी व्यक्ति ने इसे देखा।',
+  'Alerting is the only outbound call KryxAI makes; it is passive otherwise. Delivery is best-effort, never affects the scan result, and is not part of the evidence chain.':
+    'अलर्टिंग ही KryxAI का एकमात्र आउटबाउंड कॉल है; अन्यथा यह निष्क्रिय है। डिलीवरी सर्वोत्तम प्रयास पर आधारित है, स्कैन परिणाम को कभी नहीं बदलती, और साक्ष्य शृंखला का हिस्सा नहीं है।',
 
   'Dismiss': 'बंद करें',
   'Retry': 'पुनः प्रयास',

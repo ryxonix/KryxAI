@@ -166,6 +166,17 @@ class Settings(BaseSettings):
         return str(bundled) if bundled.is_file() else ""
 
     # ── Alerting (all optional; missing credentials are skipped, not fatal)
+    # Alerting is the only outbound network call this package makes, so a
+    # default install must stay silent. `alerts_enabled` below is True; what
+    # keeps it quiet is that no channel carries credentials by default, and
+    # `dispatch` makes no request at all without one.
+    alerts_enabled: bool = True
+    # A finding at or above this severity notifies. "info" is present in every
+    # scan, so alerting on it would page an operator for a clean capture.
+    alert_min_severity: str = "high"
+    # Per-attempt socket timeout. Worst case a scan spends
+    # channels x (max_alert_retries + 1) x this on delivery.
+    alert_timeout_s: float = 5.0
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
     smtp_host: str = ""

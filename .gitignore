@@ -47,6 +47,16 @@ node_modules/
 frontend/dist/
 frontend/.vite/
 
+# Dev-server logs. `frontend/.gitignore` covers the frontend's own; this is for
+# the same habit in the repo root, where nothing writes on purpose.
+*.log
+
+# Shell and editor scratch. `%TEMP%/` is a literal directory this checkout
+# accumulated from an unquoted Windows path expansion; nothing in the code,
+# tests or docs reads it.
+%TEMP%/
+.smoke/
+
 # Fabric deployment material. crypto-config/ is generated per-deployment and
 # contains key material — regenerate it, never commit it.
 deploy/nbf-fabric/crypto-config/

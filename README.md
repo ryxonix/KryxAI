@@ -77,7 +77,7 @@ RSA-3072 report-signing key. Override the individual paths with
 ## Use
 
 ```bash
-# generate the synthetic demo corpus (13 captures, all clearly labelled fake)
+# generate the synthetic demo corpus (17 captures, all clearly labelled fake)
 kryxai corpus corpus
 
 # analyse a capture
@@ -173,6 +173,48 @@ than scored as zero.
   CERT-In API. The bundled feed is an empty, clearly-unverified example;
   operator-supplied files are the supported path and every feed records its own
   provenance.
+- **Alerting is opt-in and is the only outbound call KryxAI makes.** Everything
+  else is observation of a capture that already exists.
+
+## Alerting
+
+Optional. When a scan produces a finding at or above
+`KRYXAI_ALERT_MIN_SEVERITY` (default `high`), the configured channels are
+notified. With no channel configured, KryxAI sends nothing — which is the
+default install, and the reason a stock deployment makes no network call at all.
+
+```bash
+KRYXAI_ALERTS_ENABLED=true
+KRYXAI_ALERT_MIN_SEVERITY=high      # critical|high|medium|low|info
+KRYXAI_MAX_ALERT_RETRIES=3
+KRYXAI_ALERT_TIMEOUT_S=5
+
+KRYXAI_TELEGRAM_BOT_TOKEN=...  KRYXAI_TELEGRAM_CHAT_ID=...
+KRYXAI_SMTP_HOST=...           KRYXAI_SMTP_USER=...  KRYXAI_SMTP_PASSWORD=...
+KRYXAI_ALERT_EMAIL_TO=...
+KRYXAI_NTFY_TOPIC=...
+KRYXAI_WEBHOOK_URL=...
+```
+
+`/health` and `kryxai capabilities` report which channels are live. Three
+guarantees, each tested:
+
+- **Alerting can never fail a scan.** A scan is evidence; losing it because a
+  webhook timed out would be the wrong trade.
+- **A failed delivery is recorded, not swallowed.** The outcome lands in
+  `report.alerts`, and the dashboard's Notification panel renders it directly
+  below the finding strips, so a scan whose notification failed says so rather
+  than implying a page went out that never did. That panel makes the failure
+  state the loud one, and states a 2xx as a hand-off rather than a read
+  receipt. Delivery status is deliberately kept off the evidence chain, because
+  it varies run to run for identical evidence.
+- **No credential is ever logged or echoed.** Delivery records carry the channel
+  and a redacted target; secrets are stripped from exception text, since a
+  urllib error echoes the URL that failed and a Telegram URL carries the token.
+
+Unconfigured channels are skipped, never fatal. Retries are bounded and
+backoff is capped, so a dead channel costs seconds rather than minutes —
+worst case `channels × (retries + 1) × KRYXAI_ALERT_TIMEOUT_S` added to a scan.
 
 ## Evidence chain
 
@@ -256,7 +298,7 @@ open `training/kryxai_train.ipynb` in Colab.
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/ -q      # 263 tests
+python -m pytest tests/ -q      # 338 tests
 cd frontend && npm run build && npx oxlint
 cd deploy/nbf-fabric/go && go vet ./...
 python training/run_notebook_locally.py   # executes the training notebook's cells
@@ -282,6 +324,7 @@ kryxai/
   scoring/     risk scoring, posture, anomalies, optional ONNX fusion
   compliance/  DPDP / CERT-In mapping and statutory sources
   feeds/       offline IoC adapter with provenance
+  alerts.py    opt-in outbound notification (Telegram, email, ntfy, webhook)
   reports/     signatures and JSON / HTML / PDF rendering
   store.py     SQLite evidence chain, proof of work, anchors
   engine.py    orchestration
@@ -290,7 +333,7 @@ kryxai/
 deploy/nbf-fabric/   Fabric + IPFS external anchoring
 frontend/            React dashboard
 training/            synthetic corpus, Colab notebook, model installer
-tests/               263 tests
+tests/               338 tests
 ```
 
 ## Licence

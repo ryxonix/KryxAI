@@ -23,7 +23,8 @@ shortfall is stated rather than glossed.
 | D4 | TLS version assessment | **met** | `policy/kb.py` TLS_VERSION; `not_assessed` when unreadable |
 | D5 | Cipher suite assessment | **met** | `policy/ciphers.py`; case 04 |
 | D6 | Key-exchange group assessment | **met** | `policy/ciphers.py`; `tests/test_policy.py` |
-| D7 | Certificate extraction and chain parsing | **met** | `policy/x509.py`; TLS 1.3 limits stated, never reported as a pass |
+| D7 | Certificate extraction and chain parsing | **met** | `kryxai/pcap/x509.py`; TLS 1.3 limits stated, never reported as a pass |
+
 | D8 | Certificate validity: dates, SAN/CN, chain depth, CA/self-signed | **met** | cases 06, 07; capture-time evaluation, not wall-clock |
 | D9 | Public key algorithm and size analysis | **met** | case 05; 1024-bit RSA flagged |
 | D10 | Forward secrecy | **met** | case 04; RSA key exchange → `no_forward_secrecy` |

@@ -6,6 +6,7 @@ import { FindingStrip } from '../components/ShieldBanner'
 import { CompliancePanel } from '../components/CompliancePanel'
 import { CoveragePanel } from '../components/CoveragePanel'
 import { InterceptionPanel } from '../components/InterceptionPanel'
+import { AlertsPanel } from '../components/AlertsPanel'
 import { SessionCard } from '../components/SessionCard'
 import { useT, useI18n, localized } from '../i18n'
 import { api, type Capabilities, type Health, type Report } from '../lib/api'
@@ -115,6 +116,14 @@ export default function Dashboard({
         <FindingStrip key={f.finding_id} finding={f} />
       ))}
       {top.length > 0 && <div className="h-4" />}
+
+      {/* Directly after the strips it qualifies: a critical finding nobody was
+          told about is a different situation from one that was announced. */}
+      {report.alerts && (
+        <div className="mb-5">
+          <AlertsPanel alerts={report.alerts} />
+        </div>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         <section className="rounded-xl border border-[#E4E4E7] bg-white p-5">

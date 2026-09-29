@@ -99,6 +99,11 @@ def health() -> Dict[str, Any]:
         "anchor_required": global_settings.blockchain_anchor_required,
         "external_anchor": global_settings.blockchain_external_anchor,
         "alert_channels": global_settings.active_alert_channels(),
+        # `alert_channels` alone reads as "alerting is on". It is not: a
+        # deployment with no channel sends nothing, and that is the default.
+        # These two make the difference between "would notify" and "will not".
+        "alerts_enabled": global_settings.alerts_enabled,
+        "alert_min_severity": global_settings.alert_min_severity,
     }
 
 

@@ -227,6 +227,16 @@ export interface Report {
    * build predates the field and must still typecheck.
    */
   interception?: InterceptionEvidence
+  /**
+   * Whether the operator was actually notified about this scan's serious
+   * findings. Optional for the same reason as `coverage` and `interception`:
+   * a report cached by an older build predates the field.
+   *
+   * The panel that reads this renders nothing at all when the field is absent,
+   * rather than showing a quiet green "notified" - a missing field is a gap,
+   * not a success.
+   */
+  alerts?: AlertReport
   posture: Posture
   anomalies: unknown[]
   compliance: ComplianceSummary
@@ -288,6 +298,34 @@ export interface InterceptionEvidence {
   /** Why a passive observer can make this claim when a live scanner cannot. */
   why_passive: string
   reference: string
+}
+
+/**
+ * One attempt to notify one channel.
+ *
+ * `target` is a redaction produced by the backend, never the configured value:
+ * a Telegram target reads `bot<redacted>`, so nothing replayable travels into
+ * a report.
+ */
+export interface AlertDelivery {
+  channel: string
+  target: string
+  status: 'sent' | 'failed'
+  attempts: number
+  error: string | null
+}
+
+export interface AlertReport {
+  enabled: boolean
+  min_severity: string
+  triggered: boolean
+  channels_configured: string[]
+  deliveries: AlertDelivery[]
+  /** Delivery records with a non-`sent` status. Non-empty means nobody was told. */
+  failures: AlertDelivery[]
+  /** Why nothing was sent, when nothing was. */
+  skipped_reason: string | null
+  note: string
 }
 
 /**
@@ -382,6 +420,10 @@ export interface Health {
   anchor_required: boolean
   external_anchor: boolean
   alert_channels: string[]
+  /** False means the scan ran with notification switched off entirely. */
+  alerts_enabled: boolean
+  /** Findings below this severity never notify. */
+  alert_min_severity: string
 }
 
 export interface ChainStatus {

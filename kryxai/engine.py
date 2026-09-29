@@ -8,13 +8,15 @@ backs the CLI, the FastAPI surface and the test suite.
 from __future__ import annotations
 
 import hashlib
+import logging
 import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from . import coverage, interception
+from . import alerts, coverage, interception
+from .alerts import DEFAULT_MIN_SEVERITY as DEFAULT_ALERT_SEVERITY
 from .compliance import dpdp
 from .config import Settings
 from .feeds import ioc
@@ -24,6 +26,8 @@ from .pcap.tcp import reassemble
 from .policy import kb
 from .scoring import anomaly, fusion
 from .store import Store
+
+_LOG = logging.getLogger("kryxai.engine")
 
 TOOL_NAME = "KryxAI"
 TOOL_VERSION = "0.1.0"
@@ -380,6 +384,12 @@ def run_scan(
         "external_anchor": bool(getattr(block, "anchored", False)),
     }
 
+    # Alerting is attempted after the report is whole, because an alert quotes
+    # the posture, the finding list and the evidence block, and every one of
+    # those is set by this point. The result is recorded on the report either
+    # way, so a scan whose notifications failed still says so.
+    report["alerts"] = _dispatch_alerts(report, settings)
+
     # Requirement coverage is derived after the report is whole, because it
     # reads the evidence sections rather than reproducing them. Report files are
     # only known once builder.write has run, so `written` is filled in by the
@@ -388,6 +398,31 @@ def run_scan(
     report["coverage"] = coverage.build_coverage(report)
 
     return ScanResult(report=report, store=store, block_index=block_index)
+
+
+def _dispatch_alerts(
+    report: Dict[str, Any], settings: Optional[Settings]
+) -> Dict[str, Any]:
+    """Notify the operator, and never let a notification fail the scan.
+
+    A scan is evidence. Losing it because a webhook timed out would be the
+    wrong trade, so every failure is caught and recorded. The result is the
+    only honest way to say "the operator was not told" in the report itself.
+    """
+    try:
+        return alerts.dispatch(report, settings).to_dict()
+    except Exception as exc:  # noqa: BLE001 - alerting must not break a scan
+        _LOG.warning("alert dispatch failed: %s", type(exc).__name__)
+        return {
+            "enabled": False,
+            "min_severity": DEFAULT_ALERT_SEVERITY,
+            "triggered": False,
+            "channels_configured": [],
+            "deliveries": [],
+            "failures": [],
+            "skipped_reason": f"alert dispatch raised {type(exc).__name__}",
+            "note": "Alert delivery is best-effort and never affects the scan result.",
+        }
 
 
 def _chain_state(block) -> str:
