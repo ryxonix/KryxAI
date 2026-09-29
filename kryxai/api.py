@@ -11,7 +11,9 @@ of quietly returning a report that is not anchored.
 
 from __future__ import annotations
 
+import json
 import logging
+import re
 import shutil
 import tempfile
 import uuid
@@ -56,6 +58,10 @@ app.add_middleware(
 _SCAN_CACHE_MAX = 64
 _scan_cache: "OrderedDict[str, Dict[str, Any]]" = OrderedDict()
 
+# Scan ids are hex uuids. Anything else is refused before it reaches the
+# filesystem, so a crafted id cannot traverse out of the reports directory.
+_SAFE_SCAN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+
 
 def _remember(scan_id: str, report: Dict[str, Any]) -> None:
     _scan_cache[scan_id] = report
@@ -69,6 +75,65 @@ def _recall(scan_id: str) -> Optional[Dict[str, Any]]:
     if report is not None:
         _scan_cache.move_to_end(scan_id)
     return report
+
+
+def _load_report_from_disk(scan_id: str, settings: Settings) -> Optional[Dict[str, Any]]:
+    """Rehydrate a report written by a previous process.
+
+    `reports/<scan_id>.json` is already an artefact of the scan, so recovery
+    costs nothing extra. A scan id is a hex uuid in practice, so the name is
+    validated before it is joined onto the reports directory: a caller-supplied
+    id must never be able to escape that directory.
+    """
+    if not scan_id or not _SAFE_SCAN_ID.match(scan_id):
+        return None
+    path = Path(settings.reports_dir) / f"{scan_id}.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def _recall_or_rehydrate(
+    scan_id: str, settings: Settings
+) -> Optional[Dict[str, Any]]:
+    """In-memory first, then disk. Disk results are re-cached."""
+    report = _recall(scan_id)
+    if report is not None:
+        return report
+    report = _load_report_from_disk(scan_id, settings)
+    if report is not None:
+        _remember(scan_id, report)
+    return report
+
+
+def list_scans(limit: int = 20) -> List[Dict[str, Any]]:
+    """Recent reports, newest first, discovered from the reports directory."""
+    out_dir = Path(global_settings.reports_dir)
+    try:
+        files = sorted(
+            out_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True
+        )
+    except OSError:
+        return []
+    scans: List[Dict[str, Any]] = []
+    for path in files[:limit]:
+        scan_id = path.stem
+        try:
+            summary = json.loads(path.read_text(encoding="utf-8"))
+            evidence = summary.get("evidence") or {}
+            scans.append(
+                {
+                    "scan_id": scan_id,
+                    "block_index": evidence.get("block_index"),
+                    "chain_state": evidence.get("chain_state", "not_recorded"),
+                    "posture_grade": (summary.get("posture") or {}).get("grade"),
+                    "findings": len(summary.get("findings") or []),
+                }
+            )
+        except (OSError, ValueError, AttributeError):
+            continue
+    return scans
 
 
 def get_settings() -> Settings:
@@ -104,6 +169,11 @@ def health() -> Dict[str, Any]:
         # These two make the difference between "would notify" and "will not".
         "alerts_enabled": global_settings.alerts_enabled,
         "alert_min_severity": global_settings.alert_min_severity,
+        # Reported so an operator can tell "anchoring is off" from "anchoring is
+        # on and pointed at a gateway that is not there" without reading logs.
+        "anchor_gateway": global_settings.nbf_gateway_url
+        if global_settings.blockchain_external_anchor
+        else None,
     }
 
 
@@ -218,25 +288,32 @@ async def upload_capture(
 def _run_and_store(
     path: Path, settings: Settings, sign: bool, langs: List[str]
 ) -> ScanSummary:
+    from .anchor import anchor_report
     from .store import Store
 
     store = Store(settings.database_path)
     try:
-        result = run_scan(path, settings, store=store)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        try:
+            result = run_scan(path, settings, store=store)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+        report = result.report
+
+        # Anchor before the gate, not after. The gate demands chain_state ==
+        # "anchored", and nothing but this call can ever produce that, so
+        # checking first meant a strict deployment could never pass.
+        report["anchor_attempt"] = anchor_report(report, store, settings)
+        evidence = report.get("evidence", {})
+
+        # Check the anchor gate BEFORE writing anything. Reporting 503 "no
+        # report is returned" while a signed PDF/HTML is already on disk would
+        # be exactly the dishonesty the gate exists to prevent.
+        _require_anchor_gate(evidence.get("chain_state", "not_recorded"))
     finally:
         # Always release the SQLite handle. Leaving it open leaks one
         # connection (and one WAL file) per request for the process lifetime.
         store.close()
-
-    report = result.report
-    evidence = report.get("evidence", {})
-
-    # Check the anchor gate BEFORE writing anything. Reporting 503 "no report
-    # is returned" while a signed PDF/HTML is already on disk would be exactly
-    # the dishonesty the gate exists to prevent.
-    _require_anchor_gate(evidence.get("chain_state", "not_recorded"))
 
     out_dir = Path(settings.reports_dir)
     paths = report_builder.write(
@@ -258,17 +335,25 @@ def _run_and_store(
     )
 
 
+@app.get("/api/v1/scans")
+def get_scans(limit: int = Query(20, ge=1, le=200)) -> Dict[str, Any]:
+    """Recent scans, so a reloaded client can restore what it was looking at."""
+    return {"scans": list_scans(limit)}
+
+
 @app.get("/api/v1/report/{scan_id}")
 def get_report(
-    scan_id: str, lang: str = Query("en", pattern="^(en|hi)$")
+    scan_id: str,
+    lang: str = Query("en", pattern="^(en|hi)$"),
+    settings: Settings = Depends(get_settings),
 ) -> Dict[str, Any]:
-    report = _recall(scan_id)
+    report = _recall_or_rehydrate(scan_id, settings)
     if report is None:
         raise HTTPException(
             status_code=404,
             detail=(
-                "report not in memory; it was not produced by this process or the "
-                "process has restarted"
+                "report not in memory and not on disk; it was not produced by "
+                "this deployment, or its report files have been removed"
             ),
         )
     if lang == "hi":
@@ -280,13 +365,15 @@ def get_report(
 
 @app.get("/api/v1/report/{scan_id}/html")
 def get_report_html(
-    scan_id: str, lang: str = Query("en", pattern="^(en|hi)$")
+    scan_id: str,
+    lang: str = Query("en", pattern="^(en|hi)$"),
+    settings: Settings = Depends(get_settings),
 ) -> Any:
     from fastapi.responses import HTMLResponse
 
-    report = _recall(scan_id)
+    report = _recall_or_rehydrate(scan_id, settings)
     if report is None:
-        raise HTTPException(status_code=404, detail="report not in memory")
+        raise HTTPException(status_code=404, detail="report not in memory or on disk")
     return HTMLResponse(report_builder.render_html(report, lang=lang))
 
 

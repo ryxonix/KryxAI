@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { LANGS, LANG_NAMES, useI18n } from '../i18n'
+import type { View } from '../router'
 
 function readEnvBaseTrimmed(): string {
   const env = (import.meta as any).env ?? {}
@@ -69,7 +70,7 @@ export function TopBar({
   onNav,
 }: {
   right?: React.ReactNode
-  onNav?: (id: string) => void
+  onNav?: (view: View) => void
 }) {
   return (
     <header className="sticky top-0 z-30 border-b border-[#E4E4E7] bg-[#FAF8F5]/90 backdrop-blur-md">
@@ -131,8 +132,8 @@ function SettingsMenu() {
 }
 
 /* ------------------------------ Sidebar shell ------------------------------ */
-export type NavItem = { id: string; label: string; badge?: string }
-export type NavSection = { id: string; label: string; items: NavItem[]; landing?: string }
+export type NavItem = { id: View; label: string; badge?: string }
+export type NavSection = { id: string; label: string; items: NavItem[]; landing?: View }
 
 export function Sidebar({
   sections,
@@ -141,8 +142,8 @@ export function Sidebar({
   header,
 }: {
   sections: NavSection[]
-  active: string
-  onNavigate: (id: string) => void
+  active: View
+  onNavigate: (view: View) => void
   header?: React.ReactNode
 }) {
   const [openSet, setOpenSet] = useState<Set<string>>(

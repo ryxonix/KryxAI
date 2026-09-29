@@ -424,6 +424,26 @@ export interface Health {
   alerts_enabled: boolean
   /** Findings below this severity never notify. */
   alert_min_severity: string
+  /**
+   * The NBF gateway this deployment anchors to, or null when external
+   * anchoring is off. Null distinguishes "anchoring is disabled" from
+   * "anchoring is on and pointed somewhere".
+   */
+  anchor_gateway?: string | null
+}
+
+/**
+ * A report that exists on disk, without loading the whole body.
+ *
+ * Used to restore the last scan after a reload, so a refresh does not silently
+ * present an empty dashboard.
+ */
+export interface ScanListItem {
+  scan_id: string
+  block_index: number | null
+  chain_state: string
+  posture_grade?: string
+  findings: number
 }
 
 export interface ChainStatus {
@@ -512,6 +532,12 @@ export const api = {
   },
 
   report: (scanId: string) => request<Report>(`/api/v1/report/${scanId}`),
+
+  /** Recent reports on disk, newest first. Empty when nothing has been scanned. */
+  scans: (limit = 20) =>
+    request<{ scans: ScanListItem[] }>(`/api/v1/scans?limit=${limit}`).then(
+      (r) => r.scans ?? [],
+    ),
 }
 
 export async function chainBlocks(): Promise<ChainBlock[]> {

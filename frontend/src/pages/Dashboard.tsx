@@ -24,7 +24,7 @@ export default function Dashboard({
   onNavigate,
 }: {
   report: Report | null
-  onNavigate?: (id: string) => void
+  onNavigate?: (id: 'dashboard' | 'scan' | 'findings' | 'reports') => void
 }) {
   const t = useT()
   const { lang } = useI18n()
