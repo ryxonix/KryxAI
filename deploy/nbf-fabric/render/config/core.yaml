@@ -1,0 +1,68 @@
+# KryxAI — NBF anchor peer config for the single-container
+# Render / Cloud Run image (render/Dockerfile).
+#
+# No Docker: chaincode runs as a chaincode-as-a-service (ccaas) server and the
+# peer connects to it on 127.0.0.1:9999 (see /opt/hyperledger/ccaas_builder).
+# State DB is goleveldb (no CouchDB) to fit the 512 MB free tiers.
+version: 2.0.0
+
+peer:
+  id: peer0.kryxai.example.com
+  networkId: kryxai-net
+  listenAddress: 0.0.0.0:7051
+  address: 127.0.0.1:7051
+  addressAutoDetect: false
+  keepalive:
+    minInterval: 60s
+  gossip:
+    bootstrap: 127.0.0.1:7051
+    useLeaderElection: false
+    orgLeader: true
+    externalEndpoint: 127.0.0.1:7051
+  tls:
+    enabled: false
+  authentication:
+    timewindow: 15m
+  localMspId: Org1MSP
+  mspConfigPath: /app/data/crypto-config/peerOrganizations/kryxai.example.com/peers/peer0.kryxai.example.com/msp
+  fileSystemPath: /app/data/ledger/peer
+  operations:
+    listenAddress: 127.0.0.1:9444
+    tls:
+      enabled: false
+  handlers:
+    authFilters:
+      - name: DefaultAuth
+    decorators:
+      - name: DefaultDecorator
+    endorsers:
+      escc:
+        name: DefaultEndorsement
+    validators:
+      vscc:
+        name: DefaultValidation
+
+vm:
+  endpoint: ""
+
+chaincode:
+  mode: net
+  system:
+    _lifecycle: enable
+    cscc: enable
+    lscc: enable
+    qscc: enable
+  externalBuilders:
+    - name: ccaas
+      path: /opt/hyperledger/ccaas_builder
+      propagateEnvironment:
+        - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG
+  installTimeout: 300s
+  startuptimeout: 300s
+  executetimeout: 300s
+
+ledger:
+  state:
+    stateDatabase: goleveldb
+  history:
+    enableHistoryDatabase: true

@@ -1,0 +1,20 @@
+# Normalise line endings in the repository, then check out per platform.
+# Without this, a Windows clone can rewrite the .sh entry points and the Fabric
+# shell scripts to CRLF, which breaks them on the Linux hosts that run them.
+* text=auto eol=lf
+
+# Scripts that Windows itself executes must keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binaries must never be line-ending translated.
+*.pcap binary
+*.pcapng binary
+*.onnx binary
+*.exe binary
+*.dll binary
+*.png binary
+*.ico binary
+*.pdf binary
+*.ipynb text eol=lf

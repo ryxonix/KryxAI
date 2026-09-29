@@ -1,0 +1,9 @@
+{
+  "retrieved_at": null,
+  "verified": false,
+  "note": "EXAMPLE FILE, SHIPPED EMPTY ON PURPOSE. Placeholder values below are documentation examples, not indicators. Populate this file only with a feed you have attributed, and set retrieved_at to the ISO-8601 UTC timestamp of retrieval.",
+  "ips": [],
+  "domains": [],
+  "sha256": [],
+  "urls": []
+}

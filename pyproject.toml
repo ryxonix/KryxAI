@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kryxai"
+version = "0.1.0"
+description = "Passive SMTP/IMAP/POP3 mail-security forensics with DPDP 2023 evidence mapping"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["forensics", "pcap", "smtp", "starttls", "tls", "x509", "dpdp", "cert-in"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Information Technology",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Security",
+  "Topic :: System :: Networking :: Monitoring",
+]
+
+dependencies = [
+  "cryptography>=42",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+]
+
+[project.optional-dependencies]
+api = ["fastapi>=0.111", "uvicorn[standard]>=0.30", "python-multipart>=0.0.9"]
+reports = ["reportlab>=4.2", "jinja2>=3.1"]
+model = ["onnxruntime>=1.18", "numpy>=1.26"]
+# starlette.testclient imports httpx2; without it the API tests cannot be
+# collected at all, so a clean checkout cannot run its own suite.
+dev = ["pytest>=8.2", "pytest-cov>=5.0", "httpx2>=2.0", "fastapi>=0.111", "python-multipart>=0.0.9", "reportlab>=4.2", "jinja2>=3.1"]
+all = [
+  "fastapi>=0.111",
+  "uvicorn[standard]>=0.30",
+  "python-multipart>=0.0.9",
+  "reportlab>=4.2",
+  "jinja2>=3.1",
+  "onnxruntime>=1.18",
+  "numpy>=1.26",
+  "httpx2>=2.0",
+]
+
+[project.scripts]
+kryxai = "kryxai.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["kryxai*"]
+
+[tool.setuptools.package-data]
+# risk_model.onnx and model_card.json are build outputs of training/ and are
+# gitignored, so a wheel from a clean checkout is rules-only. They are listed so
+# that a build which deliberately includes a trained model ships both the model
+# and its provenance card.
+kryxai = [
+    "compliance/sources.json",
+    "data/feeds/*.json",
+    "scoring/*.onnx",
+    "scoring/model_card.json",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = [
+  "ignore::DeprecationWarning",
+]

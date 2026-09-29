@@ -1,0 +1,15 @@
+#!/bin/bash
+# ccaas external builder — detect a chaincode-as-a-service package.
+# Implemented after the fabric release `ccaas_builder` sample scripts.
+set -euo pipefail
+
+if [ -n "${1:-}" ]; then
+  SOURCE_DIR="${1}"
+else
+  SOURCE_DIR="${CHAINCODE_SOURCE_DIR}"
+fi
+
+if [ -f "${SOURCE_DIR}/connection.json" ]; then
+  exit 0
+fi
+exit 1

@@ -1,0 +1,20 @@
+# Build context is deploy/nbf-fabric/ (see render/Dockerfile). Keep huge and
+# generated files out of the build. NOTE: this mirrors deploy/.dockerignore but
+# MUST include render/ (Dockerfile + config + scripts are consumed by the image).
+.git
+.gitignore
+**/*.log
+crypto-config
+channel-artifacts
+gateway/.dockerignore
+gateway/node_modules
+gateway/wallet
+gateway/connection-org1.json
+docs
+swagger
+tools
+scripts/__pycache__
+**/__pycache__
+**/*.pyc
+.env
+.env.*

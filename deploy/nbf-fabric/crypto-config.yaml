@@ -1,0 +1,26 @@
+# KryxAI — Org1 crypto material for the Fabric anchor network.
+# Used by cryptogen: generates MSP/TLS certs for peer0, the orderer and the CA.
+#
+#   docker run --rm -v ${PWD}/..:/work -w /work hyperledger/fabric-tools:2.2 \
+#     cryptogen generate --config=./crypto-config.yaml --output=./crypto-config
+#   (run from deploy/nbf-fabric/)
+
+OrdererOrgs:
+  - Name: Orderer
+    Domain: kryxai.example.com
+    Specs:
+      - Hostname: orderer
+        CommonName: orderer
+        SANS:
+          - "localhost"
+
+PeerOrgs:
+  - Name: Org1
+    Domain: kryxai.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+      # NBF gateway identity. fabric-ca-client enroll generates User1 into the
+      # wallet used by deploy gateway (see scripts/enroll-identities.sh).

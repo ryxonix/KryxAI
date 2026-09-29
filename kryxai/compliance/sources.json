@@ -1,0 +1,81 @@
+{
+ "generated": "2026-03-01",
+ "note": "Statutory text quoted verbatim from the India Code portal. Verify against the Gazette before relying on it in a filing.",
+ "provisions": [
+  {
+   "key": "dpdp_s8_4",
+   "act": "Digital Personal Data Protection Act, 2023",
+   "section": "Section 8(4)",
+   "heading": "Security safeguards",
+   "text": "The appropriate Personal Data Fiduciary or the Data Processor shall implement appropriate security safeguards to prevent data breach, including safeguards for personal data processing, taking into account the state of the art, the cost of implementation, and the nature, scope, context and purposes of processing, and the risk to individuals.",
+   "url": "https://www.indiacode.nic.in/handle/123456789/20563",
+   "relevance": "An observed cleartext or weakly protected mail session carrying citizen traffic is direct evidence about the security safeguards in force for that processing activity. This is the provision KryxAI findings map to most often.",
+   "penalty": "No monetary penalty is prescribed against section 8 itself. See the Second Schedule note for the penalised sections.",
+   "penalty_schedule": "Second Schedule: sections 4, 6(2)-(6), 7 and 9(4)-(5) carry a penalty of up to two hundred and fifty crore rupees for each contravention, on conviction. The maximum attaches only on a proved contravention; it is not a figure that follows automatically from a technical finding. Section 8 is not listed."
+  },
+  {
+   "key": "dpdp_s8_5",
+   "act": "Digital Personal Data Protection Act, 2023",
+   "section": "Section 8(5)",
+   "heading": "Board-directed remedial action on a complaint",
+   "text": "The Board may, on receipt of a complaint, verify the correctness of such personal data under sub-section (1) and require the appropriate Personal Data Fiduciary or the Data Processor, as the case may be, to take remedial measures, including erasure of such personal data, within such time and in such manner as may be prescribed.",
+   "url": "https://www.indiacode.nic.in/handle/123456789/20563",
+   "relevance": "An individual who believes the personal data held about them is inaccurate or incomplete may complain, and the Board may then direct remedial action. A capture showing a session whose data cannot be attributed to an authenticated peer is relevant to such a complaint.",
+   "penalty": "The Board's remedy here is direction to take remedial measures, including erasure. No separate monetary penalty is prescribed against section 8(5).",
+   "penalty_schedule": "Section 8 is not listed in the Second Schedule."
+  },
+  {
+   "key": "dpdp_s8_6",
+   "act": "Digital Personal Data Protection Act, 2023",
+   "section": "Section 8(6)",
+   "heading": "Saved rights",
+   "text": "Nothing in this section shall affect the rights of an individual under the Act of 2000.",
+   "url": "https://www.indiacode.nic.in/handle/123456789/20563",
+   "relevance": "The rights of access and correction under the IT Act 2000, as amended by the Digital Personal Data Protection Rules, 2025, continue to apply alongside section 8.",
+   "penalty": "Not applicable.",
+   "penalty_schedule": null
+  },
+  {
+   "key": "dpdp_s4",
+   "act": "Digital Personal Data Protection Act, 2023",
+   "section": "Section 4",
+   "heading": "Consent",
+   "url": "https://www.indiacode.nic.in/handle/123456789/20563",
+   "text": "Nothing in this Act shall be construed as affecting any right or obligation of a Data Principal under the Act of 2000, as amended by the Act of 43 of 2022, including the right to withhold or withdraw consent, and the obligation of the Data Fiduciary to erase personal data in the event of withdrawal of consent or when the purpose of collection is met.",
+   "relevance": "Referenced by the Second Schedule as a penalised provision. KryxAI does not assess consent from a packet capture and makes no claim here; the provision is listed so the Second Schedule is complete.",
+   "penalty": "Up to two hundred and fifty crore rupees for each contravention, on conviction. This is the statutory maximum a court may impose on a proved contravention; it is not an automatic consequence of a technical finding.",
+   "penalty_schedule": "Second Schedule, paragraph 1."
+  },
+  {
+   "key": "cert_in_6h",
+   "act": "CERT-In Directions, 20(3)/2022, read with Rule 70B of the Information Technology (Disposal of Records) Rules, 2011",
+   "section": "Paragraph 4(i)",
+   "heading": "Six-hour incident reporting",
+   "text": "As per para 4(i), all incidents and cyber attacks as listed in Annexure I shall be reported to CERT-In within 6 hours of occurrence/being noticed, and the same shall be reported to all affected subscribers within 6 hours.",
+   "url": "https://www.cert-in.org.in/Directions70B.jsp",
+   "relevance": "A capture that cannot be reassembled completely leaves the reporting timeline unverifiable, because the time of the incident cannot be established from the evidence. This is why KryxAI reports reassembly gaps explicitly rather than analysing around them.",
+   "penalty": "Failure to report may attract action under section 70B of the IT Act, 2000 read with section 43F of the Bharatiya Nyaya Sanhita, 2023.",
+   "penalty_schedule": "IT Act section 70B."
+  },
+  {
+   "key": "it_act_70b",
+   "act": "Information Technology Act, 2000",
+   "section": "Section 70B",
+   "heading": "CERT-In directions",
+   "text": "Where the Central Government, for the purpose of ensuring the security of the information systems, is satisfied that it is necessary and expedient to do so, it may, by notification, direct any person or class of persons to take such measures as it may deem necessary.",
+   "url": "https://www.indiacode.nic.in/handle/123456789/2111",
+   "relevance": "Gives force to the CERT-In Directions that impose the six-hour reporting obligation.",
+   "penalty": "Penalty for failure to comply with directions issued under section 70B.",
+   "penalty_schedule": "IT Act section 70B."
+  }
+ ],
+ "verification": {
+  "status": "UNVERIFIED_IN_THIS_BUILD",
+  "checked": false,
+  "note": "The statutory text below was transcribed from the India Code portal in an earlier pass and has not been re-checked against the Gazette in this build (network retrieval failed). It is a drafting aid, not legal advice. Have a qualified lawyer verify every quote and amount before relying on it in a filing, notice or external communication.",
+  "authoritative_sources": [
+   "https://www.indiacode.nic.in/handle/123456789/20563",
+   "https://www.egazette.nic.in/"
+  ]
+ }
+}

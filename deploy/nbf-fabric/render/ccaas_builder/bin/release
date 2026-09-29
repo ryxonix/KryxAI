@@ -1,0 +1,13 @@
+#!/bin/bash
+# ccaas external builder — publish connection.json to the release directory.
+# Invoked by the peer as:  release BUILD_OUTPUT_DIR RELEASE_OUTPUT_DIR
+# The chaincode server endpoint must land at
+#   $RELEASE_OUTPUT_DIR/chaincode/server/connection.json
+# so the peer can dial the external chaincode server directly.
+set -euo pipefail
+
+BUILD_OUTPUT_DIR="${1:-${CHAINCODE_BUILD_OUTPUT_DIR}}"
+RELEASE_OUTPUT_DIR="${2:-${CHAINCODE_RELEASE_DIR}}"
+
+mkdir -p "${RELEASE_OUTPUT_DIR}/chaincode/server"
+cp "${BUILD_OUTPUT_DIR}/connection.json" "${RELEASE_OUTPUT_DIR}/chaincode/server/connection.json"

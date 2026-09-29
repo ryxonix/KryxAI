@@ -1,0 +1,21 @@
+# KryxAI — Org1 crypto for the Fabric anchor network (single-container).
+# Used by cryptogen inside the image; writes /app/data/crypto-config.
+#
+#   cryptogen generate --config=/app/config/crypto-config.yaml --output=/app/data/crypto-config
+
+OrdererOrgs:
+  - Name: Orderer
+    Domain: kryxai.example.com
+    Specs:
+      - Hostname: orderer
+        SANS:
+          - "localhost"
+
+PeerOrgs:
+  - Name: Org1
+    Domain: kryxai.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+    Users:
+      Count: 1

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KryxAI — Mail Cryptographic Forensics</title>
+    <!--
+      No webfont is loaded on purpose. This tool analyses captures of
+      government mail infrastructure and is specified to run fully offline:
+      a render-blocking request to a font CDN would leak the operator's IP and
+      make the dashboard fail to load correctly with no network. The stack in
+      index.css uses system fonts instead.
+    -->
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

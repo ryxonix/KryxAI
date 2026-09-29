@@ -1,0 +1,22 @@
+# KryxAI — NBF anchor orderer config for the single-container
+# Render / Cloud Run image. Solo ordering (matches the verified deploy stack),
+# TLS disabled for clients. Fabric 2.2.x uses BootstrapMethod/BootstrapFile
+# (system-channel genesis) — no channel participation API / osnadmin needed.
+
+General:
+  ListenAddress: 0.0.0.0
+  ListenPort: 7050
+  TLS:
+    Enabled: false
+  BootstrapMethod: file
+  BootstrapFile: /app/data/channel-artifacts/genesis.block
+  LocalMSPDir: /app/data/crypto-config/ordererOrganizations/kryxai.example.com/orderers/orderer.kryxai.example.com/msp
+  LocalMSPID: OrdererMSP
+
+FileLedger:
+  Location: /app/data/ledger/orderer
+
+Operations:
+  ListenAddress: 127.0.0.1:9443
+  TLS:
+    Enabled: false

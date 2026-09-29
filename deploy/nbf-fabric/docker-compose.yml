@@ -1,0 +1,121 @@
+# KryxAI — minimal NBF-compatible anchor network
+#
+# A single-org Hyperledger Fabric 2.2 network (peer + orderer + couchdb,
+# matching the image tags bundled with NBF-Lite nbf_c/docker_images) plus a
+# Kubo IPFS node and the trimmed nbf-samplerest gateway. There is no Fabric CA:
+# all identities come from cryptogen and are mounted as files, so the peer and
+# the gateway wallet never need a registering CA service.
+#
+#   docker compose up -d
+#   bash scripts/install-chaincode.sh      # install + approve + commit
+#   node gateway/server.js                 # REST bridge on :4000
+#
+# The backend points BLOCKCHAIN_EXTERNAL_ANCHOR=true and NBF_GATEWAY_URL at
+# this gateway once exposed (localhost for dev, a public IP for the lab demo).
+
+services:
+  peer0:
+    image: hyperledger/fabric-peer:2.2
+    restart: unless-stopped
+    container_name: kryxai-peer0
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=kryxainet
+      - CORE_PEER_ID=peer0.kryxai.example.com
+      - CORE_PEER_ADDRESS=peer0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0:7051
+      - CORE_PEER_LOCALMSPID=Org1MSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp
+      - CORE_PEER_TLS_ENABLED=false
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CORE_CHAINCODE_EXECUTETIMEOUT=30s
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config:/etc/hyperledger/crypto
+      - ./crypto-config/peerOrganizations/kryxai.example.com/peers/peer0.kryxai.example.com/msp:/etc/hyperledger/msp
+      - ./crypto-config/peerOrganizations/kryxai.example.com/peers/peer0.kryxai.example.com/tls:/etc/hyperledger/tls
+      - ./go:/chaincode/src
+      - ./channel-artifacts:/chaincode/channel-artifacts
+      - ./scripts:/chaincode/scripts
+    ports:
+      - "7051:7051"
+    depends_on:
+      - couchdb
+
+  couchdb:
+    image: couchdb:3.1
+    restart: unless-stopped
+    container_name: kryxai-couchdb
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - "5984:5984"
+
+  orderer:
+    image: hyperledger/fabric-orderer:2.2
+    restart: unless-stopped
+    container_name: kryxai-orderer
+    environment:
+      - FABRIC_LOGGING_SPEC=info
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/etc/hyperledger/msp
+      - ORDERER_GENERAL_TLS_ENABLED=false
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/orderer.genesis.block
+    volumes:
+      - ./crypto-config/ordererOrganizations/kryxai.example.com/orderers/orderer/msp:/etc/hyperledger/msp
+      - ./channel-artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+    networks:
+      default:
+        aliases:
+          - orderer.kryxai.example.com
+    ports:
+      - "7050:7050"
+
+  ipfs:
+    image: ipfs/kubo:latest
+    restart: unless-stopped
+    container_name: kryxai-ipfs
+    command: daemon --migrate=true
+    ports:
+      - "5001:5001"
+      - "8080:8080"
+
+  gateway:
+    build: ./gateway
+    restart: unless-stopped
+    container_name: kryxai-gateway
+    environment:
+      - GATEWAY_PORT=4000
+      - IPFS_API_HOST=ipfs
+      - IPFS_API_PORT=5001
+      - IPFS_GATEWAY=http://ipfs:8080
+      - CCP_FILE=/config/connection-org1.json
+      - WALLET_DIR=/config/wallet
+      - AS_LOCALHOST=false
+    volumes:
+      - ./gateway:/app
+      - /app/node_modules
+      - ./crypto-config:/etc/hyperledger/crypto
+      - ./gateway/connection-org1.json:/config/connection-org1.json
+      - ./gateway/wallet:/config/wallet
+    ports:
+      - "4000:4000"
+    depends_on:
+      - peer0
+      - ipfs
+
+networks:
+  # Give 'default' a stable name so the chaincode containers the peer spawns
+  # (via CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE) land on the same bridge.
+  default:
+    name: kryxainet

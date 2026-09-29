@@ -1,0 +1,25 @@
+# Core runtime. Everything else is optional; the analysis engine needs only these.
+cryptography>=42
+pydantic>=2.7
+pydantic-settings>=2.3
+
+# HTTP API  ->  pip install "kryxai[api]"
+fastapi>=0.111
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+
+# PDF reports  ->  pip install "kryxai[reports]"
+# A Devanagari-capable .ttf is required for bilingual PDFs; set
+# KRYXAI_DEVANAGARI_FONT_PATH. Without it the PDF is English-only and says so.
+reportlab>=4.2
+jinja2>=3.1
+
+# Optional learned risk model. KryxAI runs fully without it; when a model file
+# is supplied via KRYXAI_ONNX_MODEL_PATH its score is fused in and the report
+# records that the model was used.
+onnxruntime>=1.18
+numpy>=1.26
+
+# Development
+pytest>=8.2
+pytest-cov>=5.0

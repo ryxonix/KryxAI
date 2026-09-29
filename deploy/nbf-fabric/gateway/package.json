@@ -1,0 +1,18 @@
+{
+  "name": "kryxai-nbf-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NBF-Lite-compatible REST gateway bridging KryxAI reports to Hyperledger Fabric + IPFS",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "fabric-network": "^2.2.10"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
