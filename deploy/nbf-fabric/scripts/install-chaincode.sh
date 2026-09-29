@@ -8,6 +8,10 @@ CC_VERSION=${CC_VERSION:-1.0}
 CC_SEQUENCE=${CC_SEQUENCE:-1}
 CHANNEL=${CHANNEL:-mychannel}
 ORDERER=${ORDERER:-orderer.kryxai.example.com:7050}
+# How the peer is addressed from inside its own container. `peer0:7051` resolves
+# via Docker DNS on the bridge network; under host networking there is no such
+# name, so scripts/deploy-codespace.sh exports PEER_ADDR=127.0.0.1:7051.
+PEER_ADDR=${PEER_ADDR:-peer0:7051}
 CC_PATH=${CC_PATH:-/chaincode/src}          # ./go mounted into the peer
 ART_DIR=${ART_DIR:-/chaincode/channel-artifacts}
 ADMIN_MSP=/etc/hyperledger/crypto/peerOrganizations/kryxai.example.com/users/Admin@kryxai.example.com/msp
@@ -28,7 +32,7 @@ echo "==> Install on peer0"
 PKG_ID=$(docker exec \
   -e CORE_PEER_LOCALMSPID=Org1MSP \
   -e CORE_PEER_MSPCONFIGPATH=${ADMIN_MSP} \
-  -e CORE_PEER_ADDRESS=peer0:7051 \
+  -e CORE_PEER_ADDRESS=${PEER_ADDR} \
   -e CORE_PEER_TLS_ENABLED=false \
   kryxai-peer0 peer lifecycle chaincode queryinstalled \
   | grep -o "${CC_NAME}_${CC_VERSION}:[A-Za-z0-9]*" | head -1 || true)
@@ -39,13 +43,13 @@ else
   docker exec \
     -e CORE_PEER_LOCALMSPID=Org1MSP \
     -e CORE_PEER_MSPCONFIGPATH=${ADMIN_MSP} \
-    -e CORE_PEER_ADDRESS=peer0:7051 \
+    -e CORE_PEER_ADDRESS=${PEER_ADDR} \
     -e CORE_PEER_TLS_ENABLED=false \
     kryxai-peer0 peer lifecycle chaincode install ${ART_DIR}/${CC_NAME}.tgz
   PKG_ID=$(docker exec \
     -e CORE_PEER_LOCALMSPID=Org1MSP \
     -e CORE_PEER_MSPCONFIGPATH=${ADMIN_MSP} \
-    -e CORE_PEER_ADDRESS=peer0:7051 \
+    -e CORE_PEER_ADDRESS=${PEER_ADDR} \
     -e CORE_PEER_TLS_ENABLED=false \
     kryxai-peer0 peer lifecycle chaincode queryinstalled \
     | grep -o "${CC_NAME}_${CC_VERSION}:[A-Za-z0-9]*" | head -1)
@@ -55,7 +59,7 @@ echo "    package id = ${PKG_ID}"
 COMMITTED_SEQ=$(docker exec \
   -e CORE_PEER_LOCALMSPID=Org1MSP \
   -e CORE_PEER_MSPCONFIGPATH=${ADMIN_MSP} \
-  -e CORE_PEER_ADDRESS=peer0:7051 \
+  -e CORE_PEER_ADDRESS=${PEER_ADDR} \
   -e CORE_PEER_TLS_ENABLED=false \
   kryxai-peer0 peer lifecycle chaincode querycommitted \
   --channelID ${CHANNEL} --name ${CC_NAME} 2>/dev/null \
@@ -68,7 +72,7 @@ else
   docker exec \
     -e CORE_PEER_LOCALMSPID=Org1MSP \
     -e CORE_PEER_MSPCONFIGPATH=${ADMIN_MSP} \
-    -e CORE_PEER_ADDRESS=peer0:7051 \
+    -e CORE_PEER_ADDRESS=${PEER_ADDR} \
     -e CORE_PEER_TLS_ENABLED=false \
     kryxai-peer0 peer lifecycle chaincode approveformyorg \
     --orderer ${ORDERER} \
@@ -82,7 +86,7 @@ else
   docker exec \
     -e CORE_PEER_LOCALMSPID=Org1MSP \
     -e CORE_PEER_MSPCONFIGPATH=${ADMIN_MSP} \
-    -e CORE_PEER_ADDRESS=peer0:7051 \
+    -e CORE_PEER_ADDRESS=${PEER_ADDR} \
     -e CORE_PEER_TLS_ENABLED=false \
     kryxai-peer0 peer lifecycle chaincode commit \
     --orderer ${ORDERER} \
@@ -97,7 +101,7 @@ echo "==> Smoke test: init + query"
 docker exec \
   -e CORE_PEER_LOCALMSPID=Org1MSP \
   -e CORE_PEER_MSPCONFIGPATH=${ADMIN_MSP} \
-  -e CORE_PEER_ADDRESS=peer0:7051 \
+  -e CORE_PEER_ADDRESS=${PEER_ADDR} \
   -e CORE_PEER_TLS_ENABLED=false \
   kryxai-peer0 peer chaincode invoke \
   --orderer ${ORDERER} --channelID ${CHANNEL} --name ${CC_NAME} \
@@ -105,7 +109,7 @@ docker exec \
 docker exec \
   -e CORE_PEER_LOCALMSPID=Org1MSP \
   -e CORE_PEER_MSPCONFIGPATH=${ADMIN_MSP} \
-  -e CORE_PEER_ADDRESS=peer0:7051 \
+  -e CORE_PEER_ADDRESS=${PEER_ADDR} \
   -e CORE_PEER_TLS_ENABLED=false \
   kryxai-peer0 peer chaincode query \
   --channelID ${CHANNEL} --name ${CC_NAME} -c '{"Args":["QueryAll"]}'

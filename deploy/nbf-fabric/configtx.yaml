@@ -39,7 +39,10 @@ Organizations:
         Type: Signature
         Rule: "OR('Org1MSP.peer')"
     AnchorPeers:
-      - Host: peer0.kryxai.example.com
+      # Resolved by configtxgen from the environment (see scripts/gen-crypto.sh).
+      # Defaults to the compose network alias; scripts/deploy-codespace.sh
+      # overrides it to 127.0.0.1 because host networking has no Docker DNS.
+      - Host: ${PEER_HOST}
         Port: 7051
 
 Capabilities:
@@ -74,7 +77,13 @@ Application: &ApplicationDefaults
 Orderer: &OrdererDefaults
   OrdererType: solo
   Addresses:
-    - orderer.kryxai.example.com:7050
+    # Substituted by configtxgen from the environment. This address is baked
+    # into the genesis block and every channel config, so a peer or client that
+    # cannot resolve it will silently fail to receive blocks.
+    # scripts/gen-crypto.sh defaults this to the compose network alias;
+    # scripts/deploy-codespace.sh overrides it to 127.0.0.1:7050 for host
+    # networking, where Docker service DNS does not exist.
+    - ${ORDERER_ADDRESS}
   BatchTimeout: 2s
   BatchSize:
     MaxMessageCount: 10

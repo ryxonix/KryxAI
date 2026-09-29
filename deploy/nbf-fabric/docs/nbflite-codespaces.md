@@ -39,30 +39,50 @@ docker --version && docker compose version
 
 ```bash
 cd deploy/nbf-fabric
-bash scripts/deploy-cloud.sh      # crypto -> profile+wallet -> compose up -> channel -> chaincode
+bash scripts/deploy-codespace.sh   # crypto -> profile+wallet -> compose up -> channel -> chaincode
 curl http://localhost:4000/health
 curl "http://localhost:4000/fabric/v1/querycc?fcn=QueryAll&ccname=kryxai-posture&channel=mychannel&mspId=Org1MSP&user=User1"
 ```
 
+Use `deploy-codespace.sh`, **not** `deploy-cloud.sh`. Docker bridge networking
+does not work inside a Codespace - two containers on the same bridge cannot open
+a TCP connection to each other, while DNS, published host ports and iptables all
+still work, so it presents as a confusing `i/o timeout`. `deploy-codespace.sh`
+brings the stack up with `docker-compose.codespace.yml`, which runs every service
+in the host network namespace and addresses them over `127.0.0.1`.
+`deploy-cloud.sh` and the default `docker-compose.yml` remain correct for a real
+VM and are left alone.
+
 Same flow as the VM: crypto → wallet → connection profile → `docker compose up
---build` (peer, orderer, CA, CouchDB, Kubo IPFS, gateway) → `mychannel` →
+--build` (peer, orderer, CouchDB, Kubo IPFS, gateway) → `mychannel` →
 `kryxai-posture` chaincode. Nothing extra to install — Docker ships in the
 Codespace.
 
-`deploy-cloud.sh` and `install-chaincode.sh` are idempotent: re-running them is
-safe (skips an already-installed/committed chaincode). The querycc call above
-should return the committed genesis record (`"scan_id":"genesis"`), proving the
-gateway wallet + connection profile + ledger all work end to end.
+Both deploy scripts are re-runnable. `gen-crypto.sh` now wipes `crypto-config/`
+and `channel-artifacts/` before regenerating, because `cryptogen` will otherwise
+leave the old identities in place while `configtxgen` writes a fresh genesis
+block, and the orderer then dies at boot with `x509: certificate signed by
+unknown authority`. Because that also invalidates the ledger, CouchDB is reset
+and the channel/chaincode are recreated on every run. `install-chaincode.sh`
+skips an already-installed/committed definition. The querycc call above should
+return the committed genesis record (`"scan_id":"genesis"`), proving the gateway
+wallet + connection profile + ledger all work end to end.
 
-**Verified end-to-end 2026-09-19** on a 2-core Codespace (Docker 28 + Compose
-v2): full deploy, chaincode `QueryAll` → genesis record, `/store` pinned a real
-IPFS CID, and a Windows-side backend report anchored + decrypted + SHA-matched
-through the public gateway URL (`onchain/{scan_id}` returned `verified: true`).
+**Verified end-to-end 2026-09-29** on a 2-core Codespace (`ominous-dollop`,
+Docker 29.8.0-1): full deploy, all five services plus the chaincode container up,
+chaincode `QueryAll` → genesis record, and the gateway answering on a public port
+4000 URL. Three things needed fixing to get there, all now in history:
 
-> Re-running after a rework? The deploy scripts had two real bugs that were
-> fixed in history: `gen-crypto.sh` aborted via SIGPIPE under `pipefail`
-> (`d000d60`), and `deploy-cloud.sh` waited on the removed `peer node status`
-> command (`bc6534e`). Pull latest before deploying.
+- `cryptogen` reusing stale crypto, as described above.
+- The orderer/peer addresses in `configtx.yaml` are **rendered**, not
+  environment-substituted. Fabric's configtx loader does not expand `${VAR}`, so
+  a placeholder would be baked into the genesis block and the peer would
+  endlessly try to dial the literal string `${ORDERER_ADDRESS}`.
+- Fabric **2.5**, not 2.2, and the orderer's three listeners (admin :9443,
+  operations :9444, cluster :9443) are moved to :9446/:9445/:9444. Under host
+  networking those defaults collide with the peer's, and Fabric 2.2's vendored
+  Docker client cannot drive Docker 29.x at all - the chaincode build fails with
+  an empty log and `docker build failed: ... /var/run/docker.sock: broken pipe`.
 
 ## 4. Make the gateway public
 

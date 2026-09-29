@@ -1,0 +1,166 @@
+# KryxAI - NBF anchor network, host-networked variant for GitHub Codespaces
+#
+# WHY THIS FILE EXISTS
+# The default `docker-compose.yml` puts the five services on a user-defined
+# Docker bridge (`kryxainet`) and reaches them by service name. That is correct
+# on a normal VM, and it is what the Oracle deployment uses.
+#
+# It does not work inside a GitHub Codespace, because Docker bridge networking
+# is non-functional there: two containers on the same bridge cannot open a TCP
+# connection to each other. Verified on Codespace `ominous-dollop` (Docker
+# 29.8.0-1) with a plain two-container busybox test - no Fabric involved, just
+# `nc -z bt2` from `bt1` on the same network, which times out. What still works
+# there is DNS, published host ports, and iptables, which is why the failure
+# presents as a confusing `i/o timeout` rather than "connection refused".
+#
+# Fabric cannot run on that, because it is peer<->couchdb, peer<->orderer and
+# gateway<->peer. So this variant puts every service in the host network
+# namespace and talks over 127.0.0.1. Consequences worth knowing:
+#
+#   * `ports:` is dropped. Host networking publishes nothing; a service reachable
+#     on a host port is already reachable on 127.0.0.1.
+#   * The gateway must bind 0.0.0.0 for Codespaces port forwarding to reach it.
+#     `gateway/server.js` already calls `app.listen(PORT)` with no host, which
+#     Node binds to all interfaces, so this needs no change.
+#   * Chaincode containers inherit host networking, which is Fabric's own
+#     default. That also removes the `NetworkMode` failure mode recorded in
+#     docs/nbflite-codespaces.md.
+#   * No port collisions: 7050/7051/7052/5984/5001/8080/4000 are all distinct.
+#
+# The services are unchanged otherwise - same images, same crypto, same
+# chaincode. Only the addressing changes.
+#
+# Usage:  bash scripts/deploy-codespace.sh
+#      (or)  docker compose -f docker-compose.codespace.yml up -d --build
+
+services:
+  peer0:
+    # 2.5, not 2.2: the Codespace runs Docker 29.8, and Fabric 2.2's vendored
+    # Docker client cannot drive it. `peer lifecycle chaincode install` fails
+    # instantly with no build log at all and just
+    #   docker build failed: write unix @->/var/run/docker.sock: write: broken pipe
+    image: hyperledger/fabric-peer:2.5
+    restart: unless-stopped
+    container_name: kryxai-peer0
+    network_mode: host
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      # Host networking for the chaincode container, matching how the peer
+      # itself is addressed. Fabric's own default.
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=host
+      - CORE_PEER_ID=peer0.kryxai.example.com
+      - CORE_PEER_ADDRESS=0.0.0.0:7051
+      # Must be a *routable* address, not 0.0.0.0: the peer refuses to start
+      # with "invalid endpoint for chaincode to connect" if the chaincode
+      # connect address is a wildcard. Under host networking the chaincode
+      # container shares this namespace, so loopback is the right target.
+      - CORE_PEER_CHAINCODEADDRESS=127.0.0.1:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=127.0.0.1:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=127.0.0.1:7051
+      - CORE_PEER_LOCALMSPID=Org1MSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/msp
+      - CORE_PEER_TLS_ENABLED=false
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=127.0.0.1:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CORE_CHAINCODE_EXECUTETIMEOUT=30s
+      # Fabric 2.5 added an operations REST listener that defaults to 0.0.0.0:9443.
+      # Under host networking the peer's copy and the orderer's copy are the same
+      # host port, so whichever starts second dies with:
+      #   failed to start admin server: listen tcp 127.0.0.1:9443: bind: address
+      #   already in use
+      # There is no operations `enabled` switch in 2.5, so the fix is to give
+      # them different addresses. Nothing connects to either.
+      - CORE_OPERATIONS_LISTENADDRESS=127.0.0.1:9443
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config:/etc/hyperledger/crypto
+      - ./crypto-config/peerOrganizations/kryxai.example.com/peers/peer0.kryxai.example.com/msp:/etc/hyperledger/msp
+      - ./crypto-config/peerOrganizations/kryxai.example.com/peers/peer0.kryxai.example.com/tls:/etc/hyperledger/tls
+      - ./go:/chaincode/src
+      - ./channel-artifacts:/chaincode/channel-artifacts
+      - ./scripts:/chaincode/scripts
+    depends_on:
+      - couchdb
+
+  couchdb:
+    image: couchdb:3.1
+    restart: unless-stopped
+    container_name: kryxai-couchdb
+    network_mode: host
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+
+  orderer:
+    # See the peer note above: match the Fabric version to the Docker daemon.
+    image: hyperledger/fabric-orderer:2.5
+    restart: unless-stopped
+    container_name: kryxai-orderer
+    network_mode: host
+    environment:
+      - FABRIC_LOGGING_SPEC=info
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/etc/hyperledger/msp
+      - ORDERER_GENERAL_TLS_ENABLED=false
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=file
+      # RENAMED in Fabric 2.3: the 2.2 spelling ORDERER_GENERAL_GENESISFILE was
+      # removed, and 2.5 exits at startup if it is the only one set.
+      - ORDERER_GENERAL_BOOTSTRAPFILE=/var/hyperledger/orderer/orderer.genesis.block
+      # Fabric 2.5's orderer binds THREE ports, not one: the admin server
+      # (127.0.0.1:9443 by default), the operations REST endpoint (0.0.0.0:9444)
+      # and the raft cluster listener (0.0.0.0:9443). Under host networking those
+      # defaults collide with the peer, and because the orderer starts first the
+      # peer loses and dies in a restart loop with:
+      #   failed to start operations subsystem: listen tcp 127.0.0.1:9443: bind:
+      #   address already in use
+      # and conversely the orderer fails with
+      #   failed to start admin server: listen tcp 127.0.0.1:9443: bind: address
+      #   already in use
+      # This is a solo, single-node orderer and nothing connects to any of these
+      # three, so each is moved to its own port and the peer keeps 9443. They are
+      # bound only because the binaries insist on binding them.
+      - ORDERER_ADMIN_LISTENADDRESS=127.0.0.1:9446
+      - ORDERER_OPERATIONS_LISTENADDRESS=127.0.0.1:9445
+      - ORDERER_CLUSTER_LISTENADDRESS=127.0.0.1:9444
+    volumes:
+      - ./crypto-config/ordererOrganizations/kryxai.example.com/orderers/orderer/msp:/etc/hyperledger/msp
+      - ./channel-artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+
+  ipfs:
+    image: ipfs/kubo:latest
+    restart: unless-stopped
+    container_name: kryxai-ipfs
+    network_mode: host
+    # Kubo >=0.43 dropped the --api.ipfs.host / --api.gateway.host flags, so
+    # the bind address is left at its default of loopback. That is enough here:
+    # under host networking the gateway reaches IPFS on 127.0.0.1, and the
+    # backend talks to the gateway rather than to IPFS directly.
+    command: daemon --migrate=true
+
+  gateway:
+    build: ./gateway
+    restart: unless-stopped
+    container_name: kryxai-gateway
+    network_mode: host
+    environment:
+      - GATEWAY_PORT=4000
+      - IPFS_API_HOST=127.0.0.1
+      - IPFS_API_PORT=5001
+      - IPFS_GATEWAY=http://127.0.0.1:8080
+      - CCP_FILE=/config/connection-org1.json
+      - WALLET_DIR=/config/wallet
+      - AS_LOCALHOST=false
+    volumes:
+      - ./gateway:/app
+      - /app/node_modules
+      - ./crypto-config:/etc/hyperledger/crypto
+      - ./gateway/connection-org1.json:/config/connection-org1.json
+      - ./gateway/wallet:/config/wallet
+    depends_on:
+      - peer0
+      - ipfs

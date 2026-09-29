@@ -1,0 +1,31 @@
+{
+  "name": "KryxAI (NBF anchor stack)",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
+  "onCreateCommand": "echo 'KryxAI devcontainer ready'",
+  "forwardPorts": [4000, 8000],
+  "portsAttributes": {
+    "4000": {
+      "label": "kryxai-nbf-gateway",
+      "onAutoForward": "public",
+      "requireLocalPort": false
+    },
+    "8000": {
+      "label": "kryxai-backend",
+      "onAutoForward": "private"
+    }
+  },
+  "remoteUser": "codespace",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-docker",
+        "golang.go"
+      ]
+    }
+  }
+}

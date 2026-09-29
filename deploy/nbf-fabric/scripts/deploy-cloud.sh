@@ -10,6 +10,13 @@
 #   bash scripts/deploy-cloud.sh
 set -euo pipefail
 
+echo "==> [0/5] Stop any previous stack"
+# gen-crypto.sh now regenerates crypto-config/ and channel-artifacts/ from a
+# clean slate, and refuses to do so while containers still hold bind mounts to
+# them. Taking the network down first is what makes a re-run actually
+# idempotent, which is what the Codespaces doc already promised.
+docker compose down --remove-orphans >/dev/null 2>&1 || true
+
 echo "==> [1/5] Generate Org1 + Orderer crypto and channel config"
 bash scripts/gen-crypto.sh
 
