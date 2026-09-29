@@ -69,6 +69,11 @@ deploy/nbf-fabric/gateway/node_modules/
 # would be both stale and the wrong platform.
 deploy/nbf-fabric/go/*.exe
 
+# Browser-automation scratch. The Playwright MCP server writes snapshots,
+# console logs and traces here when a walkthrough is run; they are session
+# output, not source, and demo_captures/ already holds the real artefacts.
+.playwright-mcp/
+
 # OS noise
 .DS_Store
 Thumbs.db
