@@ -195,6 +195,12 @@ export interface EvidenceInfo {
   chain_id: string
   chain_state: 'pending' | 'anchored' | 'demo' | string
   external_anchor?: boolean
+  /**
+   * IPFS content identifier of the report document this block commits to.
+   * Present only once an external anchor actually succeeded, so its absence is
+   * meaningful: a block with no CID is a local claim, not a published one.
+   */
+  ipfs_cid?: string
 }
 
 export interface Report {

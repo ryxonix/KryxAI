@@ -85,7 +85,7 @@ export default function Reports({
                   <dd className="font-mono text-zinc-800">{report.evidence.block_index ?? '—'}</dd>
                 </div>
                 <div className="flex gap-2">
-                  <dt className="text-zinc-500">{t('Not anchored')}</dt>
+                  <dt className="text-zinc-500">{t('External anchor')}</dt>
                   <dd className="font-mono text-zinc-800">
                     {t(`chain.${report.evidence.chain_state}`)}
                   </dd>
@@ -95,6 +95,14 @@ export default function Reports({
                     <dt className="text-zinc-500">SHA-256</dt>
                     <dd className="min-w-0 break-all font-mono text-zinc-800">
                       {report.evidence.block_hash}
+                    </dd>
+                  </div>
+                )}
+                {report.evidence.ipfs_cid && (
+                  <div className="flex gap-2">
+                    <dt className="text-zinc-500">IPFS</dt>
+                    <dd className="min-w-0 break-all font-mono text-zinc-800">
+                      {report.evidence.ipfs_cid}
                     </dd>
                   </div>
                 )}
