@@ -11,6 +11,12 @@ venv/
 # Writable runtime state. The image redirects KRYXAI_HOME to /data, so none of
 # this belongs in the layer.
 #
+# /reports/ is anchored, and the anchor is load-bearing: kryxai/reports/ is the
+# Python subpackage that builds JSON, HTML and PDF output, and it must stay in
+# the image. Docker currently treats a bare `reports/` as context-root only,
+# unlike gitignore, which would match kryxai/reports/ at any depth — that exact
+# confusion had already cost kryxai/reports/ its place in git history.
+#
 # reports/ is excluded because reports/keys/report_signing_key.pem is a PRIVATE
 # RSA signing key that is committed to the repository. Baking it in would ship
 # a publicly known key and every deployment would sign reports with it. The app
@@ -18,7 +24,7 @@ venv/
 kryxai.db
 kryxai.db-wal
 kryxai.db-shm
-reports/
+/reports/
 
 # The React SPA is built and served by a separate static site (see render.yaml),
 # so the whole Node toolchain is dead weight in this build context.

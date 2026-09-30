@@ -13,10 +13,18 @@ venv/
 
 # KryxAI runtime state — see the "Where data is written" section of README.md.
 # The signing key in particular must never be committed.
+#
+# The leading slashes on reports/ and .smoke/ are load-bearing. An unanchored
+# gitignore pattern matches at EVERY directory level, so a bare `reports/`
+# also excluded kryxai/reports/ — the Python subpackage, not the runtime output
+# dir. Those four files were therefore never committed, and a fresh clone (or a
+# CI build, or a Render deploy) produced a wheel with no kryxai.reports, which
+# only failed at import time as "No module named 'kryxai.reports'". Anchor any
+# pattern here that could also name a real source directory.
 kryxai.db
 kryxai.db-journal
-reports/
-.smoke/
+/reports/
+/.smoke/
 *.pem
 .keys/
 
