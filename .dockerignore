@@ -1,0 +1,37 @@
+# Build artefacts and local state — never bake these into the image.
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Writable runtime state. The image redirects KRYXAI_HOME to /data, so none of
+# this belongs in the layer.
+#
+# reports/ is excluded because reports/keys/report_signing_key.pem is a PRIVATE
+# RSA signing key that is committed to the repository. Baking it in would ship
+# a publicly known key and every deployment would sign reports with it. The app
+# generates a fresh key on first use.
+kryxai.db
+kryxai.db-wal
+kryxai.db-shm
+reports/
+
+# The React SPA is built and served by a separate static site (see render.yaml),
+# so the whole Node toolchain is dead weight in this build context.
+frontend/
+
+# The Fabric + IPFS anchor builds its own image under deploy/nbf-fabric/render.
+deploy/
+
+# Not part of the runtime: package discovery in pyproject.toml includes only
+# `kryxai*`.
+tests/
+training/
+tools/
+
+.git/
+.github/

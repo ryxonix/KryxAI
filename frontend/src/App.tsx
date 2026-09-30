@@ -64,11 +64,18 @@ function AppInner() {
             // Only the fields the list endpoint actually returns. It omits
             // posture_score, sessions and report_files, so spreading the row
             // would put undefined into a typed ScanSummary.
+            //
+            // posture_grade is nullable on the wire (the endpoint reads it with
+            // a bare .get("grade")), so a report whose posture block is absent
+            // must not be rendered as though it had earned a letter grade.
+            // 'unknown' mirrors the backend's own "not_recorded" convention for
+            // chain_state. The gauge is already empty here because
+            // posture_score is 0, so nothing asserts a healthy posture.
             const head = recent[0]
             setSummary({
               scan_id: head.scan_id,
               block_index: head.block_index,
-              posture_grade: head.posture_grade,
+              posture_grade: head.posture_grade ?? 'unknown',
               posture_score: 0,
               findings: head.findings,
               sessions: 0,

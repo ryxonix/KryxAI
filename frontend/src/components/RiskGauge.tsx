@@ -5,6 +5,10 @@ export function bandColor(band?: string): string {
   if (band === 'critical' || band === 'F') return '#DC2626'
   if (band === 'high' || band === 'D') return '#C2410C'
   if (band === 'medium' || band === 'C') return '#b45309'
+  // A report with no grade is neutral, not good. Without this the fallthrough
+  // would paint an absent grade the same green as an A, which reads as a
+  // passing posture that was never actually measured.
+  if (band === 'unknown' || band === undefined) return '#71717A'
   return '#3f6f4f'
 }
 

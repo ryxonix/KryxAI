@@ -132,6 +132,20 @@ npm install
 npm run dev            # proxies to 127.0.0.1:8000
 ```
 
+## Deploying
+
+`render.yaml` and `Dockerfile` deploy the whole thing to Render's free tier for
+$0 — the API as a Docker web service and the SPA as a static site, no credit
+card required.
+
+```bash
+# API image
+docker build -t kryxai-api:local -f Dockerfile .
+```
+
+See [docs/DEPLOY.md](docs/DEPLOY.md) for the deploy steps, the free-tier limits,
+what is lost on every restart, and the optional Fabric anchor.
+
 ## What it detects
 
 **STARTTLS suppression (the India focus)**
@@ -334,6 +348,9 @@ deploy/nbf-fabric/   Fabric + IPFS external anchoring
 frontend/            React dashboard
 training/            synthetic corpus, Colab notebook, model installer
 tests/               338 tests
+Dockerfile           API image (Render free tier, Cloud Run)
+render.yaml          Render blueprint: API web service + static site
+docs/DEPLOY.md       free-tier deployment guide
 ```
 
 ## Licence

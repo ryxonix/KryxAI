@@ -1,0 +1,58 @@
+# KryxAI — free Render deployment.
+#
+# Two services, one repository, one account, $0:
+#
+#   kryxai-web   static site  — the React SPA, served from Render's CDN
+#   kryxai-api   web service  — FastAPI on the free compute plan
+#
+# Apply:  New -> Blueprint -> select this repository.
+# Verify: render blueprints validate render.yaml
+
+services:
+  # ----------------------------------------------------------------- API
+  - type: web
+    name: kryxai-api
+    runtime: docker
+    plan: free # 0.1 CPU / 512 MB
+    healthCheckPath: /health
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      # Writable state — SQLite evidence chain, rendered reports, and the
+      # report signing key generated on first use. Render's free tier has no
+      # persistent disk, so this directory is wiped on every spin-down and
+      # redeploy: the chain starts empty and a new signing key is minted.
+      # Reports stay labelled pending/demo and are never labelled anchored.
+      - key: KRYXAI_HOME
+        value: /data
+
+      # cors_origins is a List[str] and pydantic-settings JSON-decodes complex
+      # fields from the environment, so this value MUST be valid JSON. A bare
+      # comma-separated string raises SettingsError at import time and the API
+      # refuses to boot.
+      #
+      # Renaming the static site below means updating this value to match.
+      - key: KRYXAI_CORS_ORIGINS
+        value: '["https://kryxai-web.onrender.com"]'
+
+  # ----------------------------------------------------------------- SPA
+  - type: web
+    name: kryxai-web
+    runtime: static
+
+    # No rootDir is set: staticPublishPath is resolved against the repository
+    # root, so the build command cds into frontend/ and the publish path stays
+    # ./frontend/dist. Setting rootDir would make the two paths ambiguous.
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: ./frontend/dist
+    envVars:
+      # Vite 8 requires Node 20.19+ / 22.12+. Render's default Node can be
+      # older than that, which fails the build with an engine error.
+      - key: NODE_VERSION
+        value: "22.12.0"
+
+      # Vite inlines VITE_* variables at BUILD time, so this URL is baked into
+      # the bundle. Changing the API hostname later requires rebuilding this
+      # static site, not just the API.
+      - key: VITE_API_BASE
+        value: https://kryxai-api.onrender.com
