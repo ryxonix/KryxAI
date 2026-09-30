@@ -24,8 +24,8 @@ and evidence.
 One command sets up everything and starts the demo:
 
 ```bash
-./run_kavach.sh              # POSIX
-run_kavach.bat               # Windows
+./run_kryxai.sh              # POSIX
+run_kryxai.bat               # Windows
 ```
 
 It creates a virtualenv, installs `.[all]`, generates the synthetic corpus,

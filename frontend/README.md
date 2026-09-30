@@ -7,7 +7,7 @@ forensics engine. Talks to the FastAPI backend (`kryxai/api.py`) over `/api`,
 
 ## Run
 
-Use `../run_kavach.bat` (Windows) or `../run_kavach.sh` (POSIX) for the
+Use `../run_kryxai.bat` (Windows) or `../run_kryxai.sh` (POSIX) for the
 full stack, including the backend. To run only the UI against an
 already-running backend:
 

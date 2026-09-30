@@ -5,9 +5,9 @@ REM Creates an isolated virtualenv, installs the engine with the extras the
 REM demo actually needs, generates the synthetic corpus, and starts the API and
 REM the dashboard. Safe to re-run; use --recreate to rebuild the venv.
 REM
-REM   run_kavach.bat                start everything
-REM   run_kavach.bat --recreate     rebuild the virtualenv from scratch
-REM   run_kavach.bat --no-frontend  engine and API only (no Node required)
+REM   run_kryxai.bat                start everything
+REM   run_kryxai.bat --recreate     rebuild the virtualenv from scratch
+REM   run_kryxai.bat --no-frontend  engine and API only (no Node required)
 REM
 REM The [all] extra is deliberate. Installing the base package alone gives a
 REM working `kryxai` CLI but no uvicorn and no FastAPI, so the API silently
@@ -37,7 +37,7 @@ popd & exit /b 2
 
 :usage
 echo KryxAI one-command launcher.
-echo   run_kavach.bat [--recreate] [--no-frontend] [--api-port=N] [--web-port=N]
+echo   run_kryxai.bat [--recreate] [--no-frontend] [--api-port=N] [--web-port=N]
 exit /b 0
 
 :parsed
@@ -46,64 +46,64 @@ set "VENV=%REPO_ROOT%\.venv"
 set "PY=%VENV%\Scripts\python.exe"
 
 echo.
-echo [kavach] locating a Python 3.11+ interpreter
+echo [kryxai] locating a Python 3.11+ interpreter
 set "NEEDVENV=0"
 if exist "%PY%" (
-    echo [kavach] reusing existing venv at .venv
+    echo [kryxai] reusing existing venv at .venv
 ) else (
     set "NEEDVENV=1"
     set "BASE_PY="
     where py >nul 2>&1 && set "BASE_PY=py -3"
     if not defined BASE_PY where python >nul 2>&1 && set "BASE_PY=python"
     if not defined BASE_PY (
-        echo [kavach] no Python found on PATH. Install Python 3.11 or newer.
+        echo [kryxai] no Python found on PATH. Install Python 3.11 or newer.
         popd & exit /b 1
     )
 )
 
 if "%RECREATE%"=="1" (
-    echo [kavach] removing existing venv
+    echo [kryxai] removing existing venv
     if exist "%VENV%" rmdir /s /q "%VENV%"
     set "NEEDVENV=1"
 )
 
 if "%NEEDVENV%"=="1" (
-    echo [kavach] creating virtualenv
+    echo [kryxai] creating virtualenv
     %BASE_PY% -m venv "%VENV%"
-    if errorlevel 1 ( echo [kavach] venv creation failed & popd & exit /b 1 )
+    if errorlevel 1 ( echo [kryxai] venv creation failed & popd & exit /b 1 )
 )
 
 if not exist "%PY%" (
-    echo [kavach] %PY% is missing after venv creation
+    echo [kryxai] %PY% is missing after venv creation
     popd & exit /b 1
 )
 
-echo [kavach] installing kryxai[all] ^(the step that makes the API work^)
+echo [kryxai] installing kryxai[all] ^(the step that makes the API work^)
 "%PY%" -m pip install --quiet --upgrade pip
 REM Editable so a judge can read the source they are demoing.
 "%PY%" -m pip install --quiet -e ".[all]"
-if errorlevel 1 ( echo [kavach] install failed & popd & exit /b 1 )
+if errorlevel 1 ( echo [kryxai] install failed & popd & exit /b 1 )
 
 REM Verify rather than assume: this check is the one whose absence cost us an hour.
-echo [kavach] verifying the API extra is actually importable
+echo [kryxai] verifying the API extra is actually importable
 "%PY%" -c "import fastapi, uvicorn" 2>nul
 if errorlevel 1 (
-    echo [kavach] fastapi/uvicorn missing so the API cannot start.
-    echo [kavach] re-run with --recreate, or: pip install -e .[all]
+    echo [kryxai] fastapi/uvicorn missing so the API cannot start.
+    echo [kryxai] re-run with --recreate, or: pip install -e .[all]
     popd & exit /b 1
 )
 
 set "CORPUS_DIR=%REPO_ROOT%\demo_captures"
-echo [kavach] generating the synthetic demo corpus
+echo [kryxai] generating the synthetic demo corpus
 "%VENV%\Scripts\kryxai.exe" corpus "%CORPUS_DIR%"
-if errorlevel 1 ( echo [kavach] corpus generation failed & popd & exit /b 1 )
+if errorlevel 1 ( echo [kryxai] corpus generation failed & popd & exit /b 1 )
 
-echo [kavach] starting API on 127.0.0.1:%API_PORT%
+echo [kryxai] starting API on 127.0.0.1:%API_PORT%
 start "KryxAI API" cmd /k "cd /d ""%REPO_ROOT%"" && ""%PY%"" -m uvicorn kryxai.api:app --host 127.0.0.1 --port %API_PORT%"
 
 REM Wait for readiness instead of sleeping a fixed amount, so the dashboard is
 REM never pointed at an API that has not finished booting.
-echo [kavach] waiting for the API to become ready
+echo [kryxai] waiting for the API to become ready
 set "READY=0"
 for /l %%i in (1,1,60) do (
     if "!READY!"=="0" (
@@ -114,26 +114,26 @@ for /l %%i in (1,1,60) do (
 )
 
 if "!READY!"=="1" (
-    echo [kavach] API is ready
+    echo [kryxai] API is ready
 ) else (
-    echo [kavach] API did not become ready on port %API_PORT%
+    echo [kryxai] API did not become ready on port %API_PORT%
     popd & exit /b 1
 )
 
 if "%WITH_FRONTEND%"=="1" (
     where npm >nul 2>&1
     if errorlevel 1 (
-        echo [kavach] npm not found. API is running; dashboard skipped.
+        echo [kryxai] npm not found. API is running; dashboard skipped.
         echo           API only: http://127.0.0.1:%API_PORT%/health
         popd & exit /b 0
     )
     if not exist "%REPO_ROOT%\frontend\node_modules" (
-        echo [kavach] installing dashboard dependencies
+        echo [kryxai] installing dashboard dependencies
         pushd frontend
         call npm install --no-fund --no-audit
         popd
     )
-    echo [kavach] starting dashboard on 127.0.0.1:%WEB_PORT%
+    echo [kryxai] starting dashboard on 127.0.0.1:%WEB_PORT%
     set "VITE_API_TARGET=http://127.0.0.1:%API_PORT%"
     start "KryxAI Dashboard" cmd /k "cd /d ""%REPO_ROOT%\frontend"" && set VITE_API_TARGET=http://127.0.0.1:%API_PORT% && npm run dev -- --port %WEB_PORT% --host 127.0.0.1"
 ) else (

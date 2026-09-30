@@ -6,9 +6,9 @@
 # dashboard. Safe to re-run: an existing venv is reused unless --recreate is
 # passed.
 #
-#   ./run_kavach.sh              # start everything
-#   ./run_kavach.sh --recreate   # rebuild the venv from scratch
-#   ./run_kavach.sh --no-frontend  # engine and API only (no Node required)
+#   ./run_kryxai.sh              # start everything
+#   ./run_kryxai.sh --recreate   # rebuild the venv from scratch
+#   ./run_kryxai.sh --no-frontend  # engine and API only (no Node required)
 #
 # The [all] extra is deliberate. Installing the base package alone produces a
 # working `kryxai` CLI but no uvicorn and no FastAPI, so the API silently fails
@@ -44,7 +44,7 @@ done
 VENV="$REPO_ROOT/.venv"
 PY="$VENV/bin/python"
 
-say() { printf '\n\033[1m[kavach]\033[0m %s\n' "$1"; }
+say() { printf '\n\033[1m[kryxai]\033[0m %s\n' "$1"; }
 
 # --- 1. interpreter ------------------------------------------------------
 say "locating a Python 3.11+ interpreter"
