@@ -10,6 +10,10 @@ import { useRouter } from './router'
 import { api, type Finding, type Report, type ScanSummary } from './lib/api'
 
 const LAST_SCAN_KEY = 'kryxai-last-scan'
+// Acknowledged critical alerts are remembered per scan, not per session. A
+// blocking modal that reappears on every route change or refresh trains the
+// operator to reflexively dismiss it, which is worse than not showing it.
+const DISMISSED_ALERT_KEY = 'kryxai-dismissed-alert'
 
 function AppInner() {
   const t = useT()
@@ -18,8 +22,17 @@ function AppInner() {
   const [summary, setSummary] = useState<ScanSummary | null>(null)
   // Track WHICH scan the operator dismissed, not a boolean. Deriving
   // "is it showing" from the id removes the need to reset state in an effect,
-  // and re-opening the alert for a new scan falls out for free.
-  const [dismissedFor, setDismissedFor] = useState<string | null>(null)
+  // and re-opening the alert for a new scan falls out for free. Persisted so
+  // a refresh or a client-side route change does not resurrect it.
+  const [dismissedFor, setDismissedFor] = useState<string | null>(
+    () => localStorage.getItem(DISMISSED_ALERT_KEY),
+  )
+
+  const dismissAlert = useCallback(() => {
+    const id = report?.evidence.scan_id ?? null
+    setDismissedFor(id)
+    if (id) localStorage.setItem(DISMISSED_ALERT_KEY, id)
+  }, [report])
 
   const load = useCallback(async (scanId: string) => {
     try {
@@ -38,18 +51,37 @@ function AppInner() {
   useEffect(() => {
     let cancelled = false
     const restore = async () => {
-      let scanId = localStorage.getItem(LAST_SCAN_KEY)
+      const scanId = localStorage.getItem(LAST_SCAN_KEY)
       if (!scanId) {
-        // No local memory (first visit, or storage cleared): fall back to the
-        // most recent report the backend still has on disk.
+        // No local memory (first visit, or storage cleared). Keep the provenance
+        // line in the footer, but deliberately do NOT load the report: a score
+        // from a capture the operator never analysed in this session would read
+        // as this capture's result, and a posture of "nothing seen" is not the
+        // same claim as "nothing found".
         try {
           const recent = await api.scans(1)
-          if (recent.length) scanId = recent[0].scan_id
+          if (recent.length && !cancelled) {
+            // Only the fields the list endpoint actually returns. It omits
+            // posture_score, sessions and report_files, so spreading the row
+            // would put undefined into a typed ScanSummary.
+            const head = recent[0]
+            setSummary({
+              scan_id: head.scan_id,
+              block_index: head.block_index,
+              posture_grade: head.posture_grade,
+              posture_score: 0,
+              findings: head.findings,
+              sessions: 0,
+              chain_state: head.chain_state,
+              report_files: {},
+            })
+          }
         } catch {
-          return
+          /* no provenance available; the empty state is accurate enough */
         }
+        return
       }
-      if (!scanId || cancelled) return
+      if (cancelled) return
       try {
         const restored = await api.report(scanId)
         if (cancelled) return
@@ -81,7 +113,7 @@ function AppInner() {
     async (s: ScanSummary) => {
       setSummary(s)
       localStorage.setItem(LAST_SCAN_KEY, s.scan_id)
-      setView('dashboard')
+      setView('findings')
       await load(s.scan_id)
     },
     [load, setView],
@@ -136,10 +168,7 @@ function AppInner() {
       </footer>
 
       {alertVisible && critical && (
-        <CriticalAlert
-          finding={critical}
-          onDismiss={() => setDismissedFor(report?.evidence.scan_id ?? null)}
-        />
+        <CriticalAlert finding={critical} onDismiss={dismissAlert} />
       )}
     </div>
   )

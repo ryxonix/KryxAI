@@ -21,8 +21,11 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Query, UploadFile, File, Form
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, UploadFile, File, Form
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field
 
 from . import __version__
@@ -50,6 +53,37 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def _jsonable_validation_input(value: Any) -> Any:
+    """Make a validation error's `input` safe to serialise.
+
+    FastAPI echoes the offending input back in the 422 body. When a client
+    posts a pcap to a JSON endpoint the input is raw bytes, and JSON encoding
+    of non-UTF-8 bytes raises inside the error handler itself, so the client
+    gets a 500 with a bare "Internal Server Error" and the real cause is lost.
+    Decode leniently and truncate: the field name and error type are what a
+    caller needs, not the body echoed back at them.
+    """
+    if isinstance(value, (bytes, bytearray)):
+        head = bytes(value[:64])
+        return repr(head) + (f"... (+{len(value) - 64} bytes)" if len(value) > 64 else "")
+    if isinstance(value, str) and len(value) > 64:
+        return value[:64] + f"... (+{len(value) - 64} chars)"
+    return value
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    detail = []
+    for err in exc.errors():
+        err = dict(err)
+        if "input" in err:
+            err["input"] = _jsonable_validation_input(err["input"])
+        detail.append(err)
+    return JSONResponse(status_code=422, content=jsonable_encoder({"detail": detail}))
+
 
 # Reports are held in-process only: the SQLite store keeps the evidence chain,
 # not the rendered report body, so a restart loses report retrieval until the

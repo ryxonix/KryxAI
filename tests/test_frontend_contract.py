@@ -189,6 +189,15 @@ def test_report_matches_declared_interface(client):
         assert _coerce(posture[field], ts), f"Posture.{field} not {ts}"
 
     for field, ts in ifaces["EvidenceInfo"]:
+        if field == "ipfs_cid":
+            # Optional, and deliberately so: a CID is only present once an
+            # external anchor actually succeeded. This scan runs unanchored, so
+            # its absence is the documented contract, not a missing field.
+            # Asserting presence here would force every report to claim a CID.
+            assert "ipfs_cid" not in report["evidence"], (
+                "unanchored scan must not report an ipfs_cid"
+            )
+            continue
         assert field in report["evidence"], f"EvidenceInfo.{field} missing"
         assert _coerce(report["evidence"][field], ts)
 

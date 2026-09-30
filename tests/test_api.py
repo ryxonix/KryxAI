@@ -145,6 +145,44 @@ def test_scan_corrupt_capture_is_422_not_500(client, tmp_path):
     assert r.status_code == 422, r.text
 
 
+def test_binary_body_to_json_endpoint_is_422_not_500(client, captures):
+    """A pcap posted to /api/v1/scan is bytes where a JSON object is expected.
+
+    FastAPI echoes the offending input into the 422 body. Serialising raw
+    pcap bytes raises inside the error handler, so the client used to get a
+    500 "Internal Server Error" and never learned it had hit the wrong
+    endpoint. It must be an ordinary 422 like any other shape mismatch.
+    """
+    data = (captures / SUPPRESSED).read_bytes()
+    assert b"\xff" in data or b"\x00" in data, "fixture should not be valid UTF-8"
+    body = (
+        b"--X\r\nContent-Disposition: form-data; name=\"capture\"; "
+        b"filename=\"a.pcap\"\r\nContent-Type: application/vnd.tcpdump.pcap\r\n\r\n"
+        + data
+        + b"\r\n--X--\r\n"
+    )
+    r = client.post(
+        "/api/v1/scan",
+        content=body,
+        headers={"Content-Type": "multipart/form-data; boundary=X"},
+    )
+    assert r.status_code == 422, r.text
+    detail = r.json()["detail"][0]
+    assert detail["loc"] == ["body"]
+    assert "bytes" in str(detail["input"])
+
+
+def test_validation_error_truncates_large_text_input(client):
+    """A large valid-UTF-8 value must not be echoed back in full."""
+    r = client.post(
+        "/api/v1/scan", json={"path": "p.pcap", "sign": "not-a-bool-" + "x" * 5000}
+    )
+    assert r.status_code == 422, r.text
+    body = r.text
+    assert len(body) < 1000, f"error body should be truncated, got {len(body)} B"
+    assert "chars" in body
+
+
 # --------------------------------------------------------------------------
 # upload
 # --------------------------------------------------------------------------
